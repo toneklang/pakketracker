@@ -18,6 +18,13 @@
     <!-- Tailwind JIT -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- 
+      Babel Standalone: Transpiles TSX/TS in the browser.
+      This resolves the 'application/octet-stream' MIME type error on GitHub Pages 
+      by fetching files as text and compiling them at runtime.
+    -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -65,7 +72,22 @@
 </head>
 <body>
     <div id="root"></div>
-    <!-- Entry point for the application -->
-    <script type="module" src="./index.tsx"></script>
+
+    <script>
+      // Configure Babel to recognize .tsx files as TypeScript + React
+      Babel.registerPreset('typescript-react', {
+        presets: [
+          [Babel.availablePresets['typescript'], { allExtensions: true, isTSX: true }],
+          [Babel.availablePresets['react']]
+        ]
+      });
+    </script>
+
+    <!-- 
+      We use type="text/babel" to bypass the browser's native module loader.
+      Babel will fetch index.tsx and all its imports, transpile them, 
+      and run the application.
+    -->
+    <script type="text/babel" data-presets="typescript-react" data-type="module" src="./index.tsx"></script>
 </body>
 </html>
