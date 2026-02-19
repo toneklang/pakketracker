@@ -1,0 +1,7 @@
+{
+  "name": "PakkeTracker DK",
+  "description": "An iPhone-inspired package tracking dashboard designed for Danish users. Automatically extracts tracking numbers and carriers from SMS or emails using AI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
