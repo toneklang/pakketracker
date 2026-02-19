@@ -13,9 +13,11 @@
     
     <title>PakkeTracker DK</title>
     
-    <!-- Global polyfill for process.env to prevent ReferenceError -->
+    <!-- Standard polyfill for process.env.API_KEY environment -->
     <script>
-      window.process = window.process || { env: {} };
+      if (typeof window.process === 'undefined') {
+        window.process = { env: {} };
+      }
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
