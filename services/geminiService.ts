@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Carrier, PackageStatus, ParseResult } from "../types";
+import { Carrier, PackageStatus, ParseResult } from "../types.ts";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
