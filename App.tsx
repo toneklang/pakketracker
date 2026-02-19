@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Package, PackageStatus, Carrier, ParseResult } from './types';
-import { PackageCard } from './components/PackageCard';
-import { parsePackageText, parsePackageImage } from './services/geminiService';
-import { fetchOutlookEmails, loginToOutlook } from './services/outlookService';
+import { Package, PackageStatus, Carrier, ParseResult } from './types.ts';
+import { PackageCard } from './components/PackageCard.tsx';
+import { parsePackageText, parsePackageImage } from './services/geminiService.ts';
+import { fetchOutlookEmails, loginToOutlook } from './services/outlookService.ts';
 
 type TabType = 'current' | 'history' | 'settings' | 'map';
 
@@ -18,7 +18,6 @@ const App: React.FC = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Persistence
   useEffect(() => {
     const saved = localStorage.getItem('pakke-tracker-data');
     if (saved) {
@@ -52,7 +51,7 @@ const App: React.FC = () => {
           id: Math.random().toString(36).substr(2, 9),
           trackingNumber: result.trackingNumber,
           carrier: result.carrier,
-          sender: result.sender || 'Supplier',
+          sender: result.sender || 'Leverandør',
           status: result.status,
           receivedDate: new Date().toISOString(),
           originalText: sourceText,
@@ -75,32 +74,19 @@ const App: React.FC = () => {
         localStorage.setItem('outlook-token', token);
       }
 
-      // Simulation for demo
-      const mockEmails = [
-        { subject: "Klar til afhentning", body: "Din GLS pakke 123456789 fra Zalando er klar i pakkeshoppen.", sender: "GLS Denmark" }
-      ];
-
-      let newFound = 0;
-      for (const email of mockEmails) {
-        const result = await parsePackageText(`${email.subject}\n${email.body}`);
-        if (result && processParsedResult(result, email.body)) {
-          newFound++;
-        }
-      }
-
       const syncTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
       setLastSync(syncTime);
       localStorage.setItem('last-sync-time', syncTime);
     } catch (e) {
       console.error(e);
-      alert("Outlook sync failed.");
+      alert("Outlook synkronisering fejlede.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const clearAllData = () => {
-    if (confirm("Are you sure? This will delete all your package history and sign you out of Outlook. This action stays only on this device.")) {
+    if (confirm("Er du sikker? Dette vil slette din historik og logge dig ud. Dette påvirker kun denne enhed.")) {
       setPackages([]);
       setOutlookToken(null);
       setLastSync(null);
@@ -114,7 +100,7 @@ const App: React.FC = () => {
   const logoutOutlook = () => {
     setOutlookToken(null);
     localStorage.removeItem('outlook-token');
-    alert("Signed out of Outlook.");
+    alert("Logget ud af Outlook.");
   };
 
   const filteredPackages = packages.filter(p => 
@@ -125,7 +111,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen max-w-md mx-auto bg-[#f2f2f7] flex flex-col relative shadow-2xl overflow-hidden pb-20">
-      {/* Header */}
       <header className="pt-12 px-6 pb-4 bg-white/80 ios-blur sticky top-0 z-40 border-b border-gray-100">
         <div className="flex justify-between items-end">
           <div>
@@ -135,7 +120,7 @@ const App: React.FC = () => {
               </h2>
               {lastSync && activeTab !== 'settings' && (
                 <span className="text-[10px] text-gray-400 font-medium tracking-tight">
-                  • Synced {lastSync}
+                  • Synkroniseret {lastSync}
                 </span>
               )}
             </div>
@@ -169,11 +154,9 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto no-scrollbar pb-10">
         {activeTab === 'settings' ? (
           <div className="p-6 animate-in fade-in duration-300">
-            {/* Account Section */}
             <div className="mb-8">
               <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 ml-4">Automation</h3>
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
@@ -183,25 +166,19 @@ const App: React.FC = () => {
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold">Outlook Account</p>
-                      <p className="text-xs text-gray-400">{outlookToken ? 'Connected' : 'Not linked'}</p>
+                      <p className="text-sm font-semibold">Outlook Konto</p>
+                      <p className="text-xs text-gray-400">{outlookToken ? 'Forbundet' : 'Ikke tilknyttet'}</p>
                     </div>
                   </div>
                   {outlookToken ? (
                     <button onClick={logoutOutlook} className="text-sm text-red-500 font-medium">Log ud</button>
                   ) : (
-                    <button onClick={handleSyncOutlook} className="text-sm text-blue-500 font-medium">Link nu</button>
+                    <button onClick={handleSyncOutlook} className="text-sm text-blue-500 font-medium">Forbind</button>
                   )}
-                </div>
-                <div className="p-4 bg-gray-50/50">
-                  <p className="text-[11px] text-gray-400 leading-relaxed">
-                    Din Outlook-forbindelse bruges kun til at læse mappen <strong>'Packages'</strong>. Vi gemmer aldrig dit kodeord.
-                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Privacy Section */}
             <div className="mb-8">
               <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 ml-4">Privatliv & Sikkerhed</h3>
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
@@ -210,7 +187,7 @@ const App: React.FC = () => {
                     <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                     </div>
-                    <p className="text-sm font-semibold">Device Storage</p>
+                    <p className="text-sm font-semibold">Lokal lagring</p>
                   </div>
                   <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">Privat</span>
                 </div>
@@ -221,14 +198,6 @@ const App: React.FC = () => {
                   Slet alt data på denne enhed
                 </button>
               </div>
-              <p className="text-[11px] text-gray-400 mt-3 px-4 text-center leading-relaxed">
-                Strangers kan ikke se dine pakker. Alt data er låst til denne specifikke browser på denne telefon.
-              </p>
-            </div>
-
-            {/* Version Info */}
-            <div className="text-center">
-              <p className="text-[10px] text-gray-300">PakkeTracker v1.2.0 • Build 2025.05</p>
             </div>
           </div>
         ) : activeTab === 'map' ? (
@@ -244,7 +213,6 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="px-6 pt-6 animate-in fade-in duration-300">
-            {/* Input Toggle Panel */}
             {showInput && (
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 mb-6 animate-in slide-in-from-top-4 duration-300">
                 <div className="flex justify-between items-center mb-4">
@@ -264,9 +232,9 @@ const App: React.FC = () => {
                        reader.onload = async (ev) => {
                          const base64Data = (ev.target?.result as string).split(',')[1];
                          const result = await parsePackageImage(base64Data, file.type);
-                         if (result && processParsedResult(result, `Image: ${file.name}`)) {
+                         if (result && processParsedResult(result, `Screenshot: ${file.name}`)) {
                            setShowInput(false);
-                         } else { alert("Could not read screenshot."); }
+                         }
                          setIsProcessing(false);
                        };
                        reader.readAsDataURL(file);
@@ -285,7 +253,6 @@ const App: React.FC = () => {
                     setIsProcessing(true);
                     const res = await parsePackageText(inputText);
                     if(res && processParsedResult(res, inputText)) { setInputText(''); setShowInput(false); }
-                    else alert("Try again.");
                     setIsProcessing(false);
                   }}
                   disabled={isProcessing || !inputText.trim()}
@@ -296,7 +263,6 @@ const App: React.FC = () => {
               </div>
             )}
 
-            {/* List Tab Switcher */}
             <div className="flex p-1 bg-gray-200/80 rounded-xl mb-6">
               <button onClick={() => setActiveTab('current')} className={`flex-1 py-1.5 text-sm font-semibold rounded-lg transition-all ${activeTab === 'current' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
                 Aktive ({packages.filter(p => p.status !== PackageStatus.PICKED_UP).length})
@@ -325,7 +291,6 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* iOS Tab Bar Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-20 bg-white/90 ios-blur border-t border-gray-200 px-10 flex items-center justify-between z-50 safe-area-bottom">
         <button onClick={() => setActiveTab('current')} className={`flex flex-col items-center transition-colors ${activeTab === 'current' || activeTab === 'history' ? 'text-blue-500' : 'text-gray-400'}`}>
           <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
