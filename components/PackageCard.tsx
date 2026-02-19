@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Package, PackageStatus, Carrier } from '../types';
+import { Package, PackageStatus, Carrier } from '../types.ts';
 
 interface PackageCardProps {
   pkg: Package;
@@ -36,10 +36,10 @@ export const PackageCard: React.FC<PackageCardProps> = ({ pkg, onToggleStatus, o
         <div className="flex flex-col gap-1">
           <CarrierBadge carrier={pkg.carrier} />
           <h3 className="text-lg font-bold text-gray-900 leading-tight">
-            {pkg.sender || 'Unknown Sender'}
+            {pkg.sender || 'Ukendt afsender'}
           </h3>
           <p className="text-xs text-gray-400 font-mono tracking-tighter">
-            #{pkg.trackingNumber || 'No ID'}
+            #{pkg.trackingNumber || 'Intet ID'}
           </p>
         </div>
         <button 
@@ -66,11 +66,11 @@ export const PackageCard: React.FC<PackageCardProps> = ({ pkg, onToggleStatus, o
         </div>
         <button 
           onClick={() => {
-            if(confirm('Delete this package?')) onDelete(pkg.id);
+            if(confirm('Slet denne pakke?')) onDelete(pkg.id);
           }}
           className="text-xs text-gray-300 hover:text-red-500 transition-colors"
         >
-          Remove
+          Fjern
         </button>
       </div>
     </div>
