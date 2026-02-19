@@ -3,6 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleGenAI, Type } from "@google/genai";
 
+// Shim for process.env to prevent ReferenceError in pure browser environments
+if (typeof (window as any).process === 'undefined') {
+  (window as any).process = { env: {} };
+}
+
 // --- TYPES ---
 enum Carrier {
   POSTNORD = 'PostNord',
@@ -40,8 +45,6 @@ interface ParseResult {
 }
 
 // --- SERVICES ---
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const SYSTEM_PROMPT = `Extract package tracking information from this Danish message (SMS or Email). 
 Identify the carrier (PostNord, GLS, DAO, Bring, etc.), the tracking number, the sender name (if available), and whether the package is currently ready for pickup or still in transit.
 Common Danish terms: "klar til afhentning" (Ready for Pickup), "pakken er på vej" (In Transit).`;
@@ -67,6 +70,7 @@ const RESPONSE_SCHEMA = {
 
 async function parsePackageText(text: string): Promise<ParseResult | null> {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `${SYSTEM_PROMPT}\n\nMessage:\n"${text}"`,
@@ -85,6 +89,7 @@ async function parsePackageText(text: string): Promise<ParseResult | null> {
 
 async function parsePackageImage(base64Data: string, mimeType: string): Promise<ParseResult | null> {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [{ inlineData: { data: base64Data, mimeType } }, { text: SYSTEM_PROMPT }],
@@ -100,6 +105,13 @@ async function parsePackageImage(base64Data: string, mimeType: string): Promise<
     return null;
   }
 }
+
+// Mocking the loginToOutlook for UI demo
+const loginToOutlook = (): Promise<string> => {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve("MOCK_TOKEN"), 1000);
+  });
+};
 
 // --- COMPONENTS ---
 const CarrierBadge: React.FC<{ carrier: Carrier }> = ({ carrier }) => {
@@ -155,6 +167,8 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'current' | 'history' | 'settings' | 'map'>('current');
   const [showInput, setShowInput] = useState(false);
+  const [outlookToken, setOutlookToken] = useState<string | null>(localStorage.getItem('outlook-token'));
+  const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('last-sync-time'));
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -192,6 +206,24 @@ const App: React.FC = () => {
     return false;
   };
 
+  const handleSyncOutlook = async () => {
+    setIsProcessing(true);
+    try {
+      const token = await loginToOutlook();
+      setOutlookToken(token);
+      localStorage.setItem('outlook-token', token);
+      const syncTime = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+      setLastSync(syncTime);
+      localStorage.setItem('last-sync-time', syncTime);
+      alert("Outlook synkroniseret (Simulering)");
+    } catch (e) {
+      console.error(e);
+      alert("Outlook synkronisering fejlede.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const filteredPackages = packages.filter(p => activeTab === 'current' ? p.status !== PackageStatus.PICKED_UP : p.status === PackageStatus.PICKED_UP);
 
   return (
@@ -199,20 +231,27 @@ const App: React.FC = () => {
       <header className="pt-12 px-6 pb-4 bg-white/80 ios-blur sticky top-0 z-40 border-b border-gray-100">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">
-              {activeTab === 'settings' ? 'Indstillinger' : new Date().toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' })}
-            </h2>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-xs font-bold text-blue-500 uppercase tracking-widest">
+                {activeTab === 'settings' ? 'Indstillinger' : new Date().toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </h2>
+              {lastSync && activeTab !== 'settings' && (
+                <span className="text-[10px] text-gray-400 font-medium tracking-tight">• {lastSync}</span>
+              )}
+            </div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
               {activeTab === 'settings' ? 'Profil' : activeTab === 'map' ? 'Find Pakker' : 'Pakker'}
             </h1>
           </div>
           {activeTab !== 'settings' && activeTab !== 'map' && (
-            <button 
-              onClick={() => setShowInput(!showInput)}
-              className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform"
-            >
-              <svg className={`w-6 h-6 transition-transform ${showInput ? 'rotate-45' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleSyncOutlook} className="w-10 h-10 bg-gray-100 text-blue-500 rounded-full flex items-center justify-center shadow-md active:scale-95 transition-all">
+                <svg className={`w-5 h-5 ${isProcessing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              </button>
+              <button onClick={() => setShowInput(!showInput)} className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform">
+                <svg className={`w-6 h-6 transition-transform ${showInput ? 'rotate-45' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+              </button>
+            </div>
           )}
         </div>
       </header>
@@ -273,7 +312,7 @@ const App: React.FC = () => {
               </div>
             )}
             <div className="flex p-1 bg-gray-200/80 rounded-xl mb-6">
-              <button onClick={() => setActiveTab('current')} className={`flex-1 py-1.5 text-sm font-semibold rounded-lg ${activeTab === 'current' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>Aktive</button>
+              <button onClick={() => setActiveTab('current')} className={`flex-1 py-1.5 text-sm font-semibold rounded-lg ${activeTab === 'current' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>Aktive ({packages.filter(p => p.status !== PackageStatus.PICKED_UP).length})</button>
               <button onClick={() => setActiveTab('history')} className={`flex-1 py-1.5 text-sm font-semibold rounded-lg ${activeTab === 'history' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>Historik</button>
             </div>
             {filteredPackages.map(pkg => (
